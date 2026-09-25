@@ -1,0 +1,7 @@
+# Per-user state written beside the script
+inspector_settings.json
+library_index.json
+sort_logs/
+*.partial
+__pycache__/
+*.pyc
