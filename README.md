@@ -46,7 +46,7 @@ Moves never overwrite: if a file with the same name is already there, the file s
 
 ## Sort a whole folder
 
-**Sort a folder...** takes a folder of downloads (top level only, subfolders are not touched), works out a destination for every `.safetensors` file in it, and shows the plan before moving anything:
+**Sort a folder...** takes a folder of downloads (top level only, unless **Include subfolders** is ticked; then every subfolder is searched too, anything already inside your model folders is skipped, and folder shortcuts are not followed), works out a destination for every `.safetensors` file in it, and shows the plan before moving anything:
 
 - **Yes**: move every file that has a guess, including Low confidence
 - **No**: move only Medium and High, leave Low where it is
@@ -60,6 +60,7 @@ Command line:
 python safetensor_inspector.py --sort "D:\Downloads" --dry-run --models-root D:\ComfyUI\models   # show the plan only
 python safetensor_inspector.py --sort "D:\Downloads"               # move (includes Low confidence)
 python safetensor_inspector.py --sort "D:\Downloads" --skip-low    # leave Low confidence in place
+python safetensor_inspector.py --sort "D:\Downloads" --recursive   # also sort files in every subfolder
 ```
 
 **Model folders...** sets two roots, saved in `inspector_settings.json` beside the script. The app asks for them the first time you move, sort or learn:

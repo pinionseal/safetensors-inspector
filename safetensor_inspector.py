@@ -154,7 +154,9 @@ class Inspector(tk.Tk):
         library = ttk.Frame(self, padding=(12, 0, 12, 8))
         library.pack(fill="x")
         ttk.Label(library, text="Library:").pack(side="left", padx=(0, 8))
-        ttk.Button(library, text="Sort a folder...", command=self.sort_folder).pack(side="left", padx=(0, 8))
+        ttk.Button(library, text="Sort a folder...", command=self.sort_folder).pack(side="left", padx=(0, 4))
+        self.recursive = tk.BooleanVar(value=False)
+        ttk.Checkbutton(library, text="Include subfolders", variable=self.recursive).pack(side="left", padx=(0, 8))
         ttk.Button(library, text="Undo last sort", command=self.undo_sort).pack(side="left", padx=(0, 8))
         ttk.Button(library, text="Learn from my folders", command=self.learn).pack(side="left", padx=(0, 8))
         ttk.Button(library, text="Model folders...", command=self.set_folders).pack(side="left", padx=(0, 8))
@@ -480,7 +482,8 @@ class Inspector(tk.Tk):
     def sort_folder(self):
         if self.copying or self.loading or not self.ensure_folders():
             return
-        folder = filedialog.askdirectory(title="Folder of downloaded models to sort (top level only)")
+        recursive = self.recursive.get()
+        folder = filedialog.askdirectory(title="Folder of downloaded models to sort" + (" (and its subfolders)" if recursive else " (top level only)"))
         if not folder:
             return
         if destination.inside(folder, library_roots()):
@@ -491,7 +494,7 @@ class Inspector(tk.Tk):
         self.status.set(f"Inspecting files in {folder}...")
         def work():
             try:
-                self.events.put((generation, {"sort_plan": destination.plan_folder(folder, inspect_file, settings), "folder": folder}, None))
+                self.events.put((generation, {"sort_plan": destination.plan_folder(folder, inspect_file, settings, recursive), "folder": folder}, None))
             except Exception as exc:
                 self.events.put((generation, None, str(exc)))
         threading.Thread(target=work, daemon=True).start()
@@ -647,6 +650,7 @@ def main():
     parser.add_argument("--json", action="store_true", help="Print report without opening the GUI (requires file)")
     parser.add_argument("--suggest", action="store_true", help="Print the best-guess ComfyUI folder (requires file)")
     parser.add_argument("--sort", metavar="FOLDER", help="Move every model file in FOLDER (top level) to its best-guess folder")
+    parser.add_argument("--recursive", action="store_true", help="With --sort: also sort model files in every subfolder of FOLDER")
     parser.add_argument("--skip-low", action="store_true", help="With --sort: leave Low-confidence files in place")
     parser.add_argument("--dry-run", action="store_true", help="With --sort: show the plan without moving anything")
     parser.add_argument("--models-root", help="ComfyUI models folder for this run (overrides the saved setting)")
@@ -664,7 +668,7 @@ def main():
     if args.sort:
         if destination.inside(args.sort, [settings.get("models_root"), settings.get("large_models_root")]):
             parser.exit(1, "That folder is inside your models folders; refusing to sort the library itself.\n")
-        plan = destination.plan_folder(args.sort, inspect_file, settings)
+        plan = destination.plan_folder(args.sort, inspect_file, settings, recursive=args.recursive)
         for p in plan:
             print(f"{'MOVE' if p['target_dir'] else 'STAY'} [{p['confidence']}] {Path(p['source']).name} -> {p['target_dir'] or p['reason']}")
         if not args.dry_run:

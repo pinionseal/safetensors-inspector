@@ -253,6 +253,24 @@ class InspectorTests(unittest.TestCase):
         self.assertTrue((downloads / "known_vae.safetensors").exists())
         Path(log).unlink()
 
+    def test_recursive_sort_finds_subfolders_and_skips_library(self):
+        downloads = Path(self.temp.name) / "downloads"
+        models = downloads / "models"   # library nested inside the folder being sorted
+        (downloads / "a" / "b").mkdir(parents=True); (models / "vae").mkdir(parents=True)
+        vae = [("encoder.conv_in.weight", [1], [1]), ("decoder.conv_out.weight", [1], [1])]
+        write_file(downloads / "top.safetensors", vae)
+        write_file(downloads / "a" / "b" / "deep.safetensors", vae)
+        write_file(models / "vae" / "already_sorted.safetensors", vae)
+        (downloads / "a" / "notes.txt").write_text("x")
+        roots = [str(models)]
+        top = [p.name for p in destination.model_files(downloads, False, roots)]
+        deep = [p.name for p in destination.model_files(downloads, True, roots)]
+        self.assertEqual(top, ["top.safetensors"])
+        self.assertEqual(sorted(deep), ["deep.safetensors", "top.safetensors"])
+        settings = {"models_root": str(models), "large_models_root": str(models), "large_file_gb": 4}
+        plan = destination.plan_folder(downloads, inspect_file, settings, recursive=True)
+        self.assertEqual(sorted(Path(p["source"]).name for p in plan), ["deep.safetensors", "top.safetensors"])
+
     def test_refuses_to_sort_library(self):
         models = Path(self.temp.name) / "models"
         (models / "loras").mkdir(parents=True)

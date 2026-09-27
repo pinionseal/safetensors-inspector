@@ -244,12 +244,25 @@ def inside(path, roots):
     return False
 
 
-def plan_folder(folder, inspect, settings):
-    """One entry per .safetensors file directly in folder: where it would go, or why it stays."""
+def model_files(folder, recursive=False, skip_roots=()):
+    """Model files in folder, top level only unless recursive. Recursion does not follow
+    folder shortcuts (no loops) and skips anything already inside the model folders."""
+    folder = Path(folder)
+    if not recursive:
+        found = [p for p in folder.iterdir() if p.is_file()]
+    else:
+        found = []
+        for base, dirs, names in os.walk(folder, followlinks=False):
+            dirs[:] = sorted(d for d in dirs if not inside(Path(base) / d, skip_roots))
+            found += [Path(base) / n for n in names]
+    return sorted(p for p in found if p.suffix.lower() in (".safetensors", ".safetensor"))
+
+
+def plan_folder(folder, inspect, settings, recursive=False):
+    """One entry per .safetensors file in folder (and its subfolders if recursive): where it would go, or why it stays."""
     plan = []
-    for path in sorted(Path(folder).iterdir()):
-        if not (path.is_file() and path.suffix.lower() in (".safetensors", ".safetensor")):
-            continue
+    roots = [settings.get("models_root"), settings.get("large_models_root")]
+    for path in model_files(folder, recursive, roots):
         item = {"source": str(path), "size": path.stat().st_size, "target_dir": None, "confidence": "None", "reason": ""}
         try:
             report = inspect(path)
