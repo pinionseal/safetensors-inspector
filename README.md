@@ -63,12 +63,12 @@ python safetensor_inspector.py --sort "D:\Downloads" --skip-low    # leave Low c
 python safetensor_inspector.py --sort "D:\Downloads" --recursive   # also sort files in every subfolder
 ```
 
-**Model folders...** sets two roots, saved in `inspector_settings.json` beside the script. The app asks for them the first time you move, sort or learn:
+**Model folders...** sets where files go, saved in `inspector_settings.json` beside the script. The app asks the first time you move, sort or learn, and the folders in use are always shown at the bottom of the window. After you pick the models folder it asks **"Put files of 4 GB and over in a DIFFERENT folder?"**: No (the default) sends everything to the models folder; Yes lets you pick a second folder:
 
 | Setting | Used for |
 |---|---|
 | models folder | your ComfyUI `models` folder (the one containing `loras`, `vae`, `checkpoints`...) |
-| large models folder (optional) | files of 4 GB and over, e.g. a second drive listed in ComfyUI's `extra_model_paths.yaml`. Falls back to the models folder |
+| large models folder (optional) | files of 4 GB and over, e.g. a second drive. Only choose one that ComfyUI's `extra_model_paths.yaml` lists **for every folder type you use**, or ComfyUI won't see files placed there. Falls back to the models folder |
 
 How the folder is chosen, first match wins:
 

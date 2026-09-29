@@ -271,6 +271,28 @@ class InspectorTests(unittest.TestCase):
         plan = destination.plan_folder(downloads, inspect_file, settings, recursive=True)
         self.assertEqual(sorted(Path(p["source"]).name for p in plan), ["deep.safetensors", "top.safetensors"])
 
+    def test_model_folders_default_puts_large_files_in_same_folder(self):
+        import safetensor_inspector as si
+        from unittest import mock
+        settings_file = destination.SETTINGS
+        backup = settings_file.read_bytes() if settings_file.exists() else None
+        models = Path(self.temp.name) / "models"; models.mkdir()
+        try:
+            settings_file.write_text(json.dumps({"models_root": "", "large_models_root": "N:\\"}), encoding="utf-8")
+            app = Inspector(); app.withdraw()
+            try:
+                with mock.patch.object(si.filedialog, "askdirectory", return_value=str(models)), \
+                     mock.patch.object(si.messagebox, "askyesno", return_value=False):
+                    self.assertTrue(app.set_folders())
+            finally:
+                app.destroy()
+            saved = destination.load_settings()
+            self.assertEqual(saved["large_models_root"], str(models))
+            self.assertIn("(all files)", si.folders_text(saved))
+        finally:
+            if backup is None: settings_file.unlink(missing_ok=True)
+            else: settings_file.write_bytes(backup)
+
     def test_refuses_to_sort_library(self):
         models = Path(self.temp.name) / "models"
         (models / "loras").mkdir(parents=True)

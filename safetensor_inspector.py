@@ -113,6 +113,15 @@ def header_names(path):
         return [k for k in json.loads(f.read(size)) if k != "__metadata__"]
 
 
+def folders_text(settings):
+    small, big = settings.get("models_root"), settings.get("large_models_root")
+    if not small:
+        return "Models folder: not set (Model folders...)"
+    if not big or big == small:
+        return f"Models folder: {small}  (all files)"
+    return f"Models folder: {small}    Files of {settings.get('large_file_gb', 4)} GB and over: {big}"
+
+
 def library_roots():
     settings = destination.load_settings()
     roots = [settings.get("models_root"), settings.get("large_models_root")]
@@ -207,7 +216,7 @@ class Inspector(tk.Tk):
         self.details = self.make_text(pane, height=7)
         self.raw = self.text_tab("Header JSON")
         self.analysis_text = self.text_tab("Weight samples / Base comparison")
-        self.status = tk.StringVar(value="Offline | Structural detection + optional weight sampling | Ctrl+O to open")
+        self.status = tk.StringVar(value=folders_text(destination.load_settings()) + "   |   Ctrl+O to open a file")
         ttk.Label(self, textvariable=self.status, padding=10).pack(fill="x")
         self.set_text(self.overview, "Open a file to inspect its metadata and tensor structure.\n\n"
                       "The app suggests model components from names and declared metadata. "
@@ -464,11 +473,14 @@ class Inspector(tk.Tk):
                                         initialdir=settings["models_root"] if os.path.isdir(settings["models_root"]) else None)
         if not small:
             return False
-        big = filedialog.askdirectory(title=f"Folder for files of {settings['large_file_gb']} GB and over (Cancel = use the same folder)",
-                                      initialdir=settings["large_models_root"] if os.path.isdir(settings["large_models_root"]) else small)
-        settings.update(models_root=small, large_models_root=big or small)
+        big = small
+        if messagebox.askyesno("Large files", f"Put files of {settings['large_file_gb']} GB and over in a DIFFERENT folder?\n\n"
+                               f"No = everything goes to\n{small}", default="no"):
+            big = filedialog.askdirectory(title=f"Folder for files of {settings['large_file_gb']} GB and over",
+                                          initialdir=small) or small
+        settings.update(models_root=small, large_models_root=big)
         destination.save_settings(settings)
-        self.status.set(f"Models folder: {small}    Large files: {big or small}")
+        self.status.set(folders_text(settings))
         return True
 
     def ensure_folders(self):
